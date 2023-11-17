@@ -7,7 +7,7 @@ const formatAddress = (address: string | undefined): `0x${string}` => {
     if (!address) {
         return `0x00`;
     }
-    return `0x${address.slice(2)}`;
+    return `0x${address}`;
 };
 
 export { isLoggedIn, formatAddress };

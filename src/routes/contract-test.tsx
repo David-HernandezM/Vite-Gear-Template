@@ -16,10 +16,17 @@ pub enum PingAction {
 */
 
 export default function ContractTest({account, gearApi}: GearHooks) {
-    const [payloadForGasData, setPayloadForGasData] = useState<PayloadType | null>(null);
+    const [payloadForGasData, setPayloadForGasData] = useState<PayloadType>({ Ping: null });
     const [contractState, setContractState] = useState("");
     const metadata = ProgramMetadata.from(CONTRACT.METADATA);
     const alert = useAlert();
+    const accountMetaSource = account.account?.meta.source ?? "0x00";
+    const accountAddress = account.account?.address ?? "0x00";
+
+    console.log("Direccion del wey sin format:");
+    console.log(accountAddress);
+    console.log("Direccion con el format:");
+    console.log(formatAddress(accountAddress));
 
     function payloadForGasDataByIndex(idx: number) {
         if (idx == 1) {
@@ -29,87 +36,99 @@ export default function ContractTest({account, gearApi}: GearHooks) {
         }
     }
 
-    const signer = async (payload: PayloadType) => {
-        const message: any = {
-            destination: formatAddress(CONTRACT.PROGRAMID), // programId
-            payload, // Add your data
-            gasLimit: 2097839268,
-            value: 0
-        };
-        const localaccount = account.account?.address;
-        const isVisibleAccount = account.accounts.some(
-          (visibleAccount) => visibleAccount.address === localaccount
-        );
-    
-        if (isVisibleAccount) {
-          // Create a message extrinsic
-          const transferExtrinsic = await gearApi.api.message.send(message, metadata);
 
-          const injector = await web3FromSource(formatAddress(account.account?.meta.source));
-    
-          transferExtrinsic
-            .signAndSend(
-              account.accounts[0].address,
-              { signer: injector.signer },
-              ({ status }) => {
-                if (status.isInBlock) {
-                  console.log(
-                    `Completed at block hash #${status.asInBlock.toString()}`
-                  );
-                  alert.success(`Block hash #${status.asInBlock.toString()}`);
-                  
-                } else {
-                  console.log(`Current status: ${status.type}`);
-                  if (status.type === "Finalized") {
-                    alert.success(status.type);
-                  }
+    const signer = async (payload: PayloadType) => {
+      console.log("With account: ");
+      console.log(account.account?.address);
+      const message: any = {
+          destination: formatAddress(CONTRACT.PROGRAMID), // programId
+          payload,
+          gasLimit: 2097839268,
+          value: 0
+      };
+      const localaccount = account.account?.address;
+      const isVisibleAccount = account.accounts.some(
+        (visibleAccount) => visibleAccount.address === localaccount
+      );
+  
+      
+      if (isVisibleAccount) {
+        // Create a message extrinsic
+        const transferExtrinsic = await gearApi.api.message.send(message, metadata);
+
+        /*
+        if (!accountMetaSource || !accountAddress) {
+          alert.error!("Account not exists!");
+          return;
+        }
+        */
+
+        const injector = await web3FromSource(accountMetaSource);
+  
+        transferExtrinsic
+          .signAndSend(
+            //account.accounts[0].address,
+            accountAddress,
+            { signer: injector.signer },
+            ({ status }) => {
+              if (status.isInBlock) {
+                console.log(
+                  `Completed at block hash #${status.asInBlock.toString()}`
+                );
+                alert.success(`Block hash #${status.asInBlock.toString()}`);
+                
+              } else {
+                console.log(`Current status: ${status.type}`);
+                if (status.type === "Finalized") {
+                  alert.success(status.type);
                 }
               }
-            )
-            .catch((error: any) => {
-              console.log(":( transaction failed", error);
-            });
-        } else {
-          alert.error("Account not available to sign");
-        }
+            }
+          )
+          .catch((error: any) => {
+            console.log(":( transaction failed", error);
+          });
+      } else {
+        alert.error("Account not available to sign");
       }
-    
-      const readState = async () => {
-        console.log("RESULTADO DEL ESTADO: ");
-        gearApi.api.programState
-          .read({ programId: formatAddress(CONTRACT.PROGRAMID), payload: { All: null } }, metadata)
-          .then((result) => {
-            setContractState(JSON.stringify(result.toJSON()));
-          })
-          .catch(({ err }: any) => console.log(err));
-      }
-    
-    return (
-        <>
-            <h2>Component Tests, contract: Ping</h2>
-            <div>
-                <div>
-                    <Button text="Ping calculation" onClick={() => {payloadForGasDataByIndex(1)}} />
-                    <Button text="Pong calculation" onClick={() => {payloadForGasDataByIndex(2)}} />
-                </div>
-                <GasData 
-                    api={gearApi}
-                    payload={payloadForGasData}
-                    metadata={ProgramMetadata.from(CONTRACT.METADATA)}
-                    contractAddress={formatAddress(CONTRACT.PROGRAMID)}
-                    userAddress={formatAddress(account.account?.address)}
-                />
-            </div>
-            <br />
-            <div>
-                <button onClick={() => {signer({ Ping: null })}}>Send Ping</button>
-                <button onClick={() => {signer({ Pong: null })}}>Send Pong</button>
-            </div>
-            <br />
-            <h2>Reading state</h2>
-            <p>{contractState}</p>
-            <br />
-            <button onClick={readState}>Read state</button>
-        </>
-    );
+    }
+  
+    const readState = async () => {
+      console.log("RESULTADO DEL ESTADO: ");
+      gearApi.api.programState
+        //.read({ programId: formatAddress(CONTRACT.PROGRAMID), payload: { All: null } }, metadata)
+        .read({ programId: CONTRACT.PROGRAMID, payload: { All: null } }, metadata)
+        .then((result) => {
+          setContractState(JSON.stringify(result.toJSON()));
+        })
+        .catch(({ err }: any) => console.log(err));
+    }
+  
+  return (
+    <>
+      <h2>Component Tests, contract: Ping</h2>
+      <div>
+          <div>
+              <Button text="Ping calculation" onClick={() => {payloadForGasDataByIndex(1)}} />
+              <Button text="Pong calculation" onClick={() => {payloadForGasDataByIndex(2)}} />
+          </div>
+          <GasData 
+              api={gearApi}
+              payload={{ Ping: null }}//{payloadForGasData}
+              metadata={ProgramMetadata.from(CONTRACT.METADATA)}
+              userAddress={formatAddress(accountAddress)}//{formatAddress(account.account?.address)}
+          />
+      </div>
+      <br />
+      <div>
+          <button onClick={() => {signer({ Ping: null })}}>Send Ping</button>
+          <button onClick={() => {signer({ Pong: null })}}>Send Pong</button>
+      </div>
+      <br />
+      <h2>Reading state</h2>
+      <p>{contractState}</p>
+      <br />
+      <button onClick={readState}>Read state</button>
+    </>
+  );
 }

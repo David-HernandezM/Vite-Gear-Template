@@ -13,7 +13,6 @@ const LOCAL_STORAGE = {
 };
 
 // Add more contracts objects for differentes contracts
-// Need to call "formatAddress" to correctly use the address
 // note: you can change the name for best developing, becouse this is
 //       a example with a functional contract
 const CONTRACT: ContractData = {
